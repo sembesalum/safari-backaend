@@ -1,0 +1,77 @@
+Safari Island API — base URL: /api/v1/
+All JSON. Public list/retrieve endpoints allow anonymous GET. Mutations require JWT (Authorization: Bearer <access>).
+
+Health
+  GET    /api/v1/health/
+
+Auth (JWT)
+  POST   /api/v1/auth/token/          body: {"username": "<email or username>", "password": "..."}
+  POST   /api/v1/auth/token/refresh/ body: {"refresh": "<refresh_token>"}
+  GET    /api/v1/auth/me/            Bearer — current user + staff profile
+  POST   /api/v1/auth/me/activity/   Bearer — ping last_active for staff profile
+
+Packages
+  GET    /api/v1/packages/           public: only status=active
+  POST   /api/v1/packages/           staff (JSON or multipart for heroImage)
+  GET    /api/v1/packages/{uuid}/
+  PUT    /api/v1/packages/{uuid}/
+  PATCH  /api/v1/packages/{uuid}/
+  DELETE /api/v1/packages/{uuid}/
+
+Fields (camelCase): id, slug, title, subtitle, desc, durationDays, status, basePrice,
+  highlights[], itinerary[], prices[], priceGroups[] (each group: title + rows[{people, price}]),
+  specialOffer[], importantInfo[], heroImage (file), heroImageUrl, img (read-only resolved URL),
+  updatedAt, created_at
+
+Tours
+  GET    /api/v1/tours/              public: only active
+  POST   /api/v1/tours/
+  GET    /api/v1/tours/{uuid}/
+  PUT|PATCH|DELETE ...
+
+Fields: id, slug, title, category, desc, includes, highlights[], bonuses[], prices[],
+  fromPrice, status, heroImage, heroImageUrl, img (read-only), updatedAt, created_at
+
+Transfer services
+  GET    /api/v1/transfers/         public: only active
+  POST   /api/v1/transfers/
+  CRUD   /api/v1/transfers/{uuid}/
+
+Fields: id, slug, title, segment (airport|half_day|full_day), summary, desc, fromPrice,
+  pricingPayload (JSON — routes, tiers, notes for airport/half/full UIs), status, updatedAt, created_at
+
+Gallery
+  GET    /api/v1/gallery/
+  POST   /api/v1/gallery/           multipart for uploads
+  GET    /api/v1/gallery/{uuid}/
+  PUT|PATCH|DELETE /api/v1/gallery/{uuid}/
+
+GET returns: {id, type, title, category, updatedAt, src? | youtubeId?, fileSrc?, posterSrc?}
+POST JSON or multipart: type (image|video), title, category, sort_order, src, image, youtube_id, file_src, video, poster_src, poster
+
+Bookings
+  GET    /api/v1/bookings/          staff only (ordered by created_at desc)
+  POST   /api/v1/bookings/          public (inquiry) — creates referenceCode
+  GET    /api/v1/bookings/{uuid}/
+  PATCH  /api/v1/bookings/{uuid}/
+  DELETE /api/v1/bookings/{uuid}/
+
+Core: referenceCode (read-only), guestName, email, phone, country, bookingType (tour|package|transfer),
+  itemName, tour, package, transferService (UUIDs|null), adults, children, partySize,
+  serviceDate, startTime, hotel, room, language,
+  selectedTours[], selectedPackageName, transportNeeded, pickupLocation, dropoffLocation,
+  additionalServices[], comment, specialRequests,
+  transferSegment, suitcases, pickupTimeNote, flightNumber, transferDirection, tourDestination,
+  preferredDatetime, customDestinationRequest, transferTimeNote, customizeDestinationRequest,
+  pricingSelection (JSON snapshot), status, notes, estimatedRevenue, created_at, updated_at
+
+Team / staff users
+  GET    /api/v1/users/             staff — list staff users
+  GET    /api/v1/users/{pk}/
+  POST   /api/v1/team/invite/       body: {email, name, role, privileges[]}
+
+Analytics (dashboard)
+  GET    /api/v1/analytics/overview/   bookingsMonth, revenueMonth, pendingBookings, activePackages, activeTours
+  GET    /api/v1/analytics/series/      [{label, bookings, revenue}, ...] last 12 months from bookings
+
+Staff access: is_staff=True OR linked StaffProfile.
