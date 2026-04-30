@@ -316,7 +316,7 @@ class BookingSerializer(serializers.ModelSerializer):
     transportNeeded = serializers.CharField(source="transport_needed", required=False, allow_blank=True)
     pickupLocation = serializers.CharField(source="pickup_location", required=False, allow_blank=True)
     dropoffLocation = serializers.CharField(source="dropoff_location", required=False, allow_blank=True)
-    additionalServices = serializers.JSONField(required=False)
+    additionalServices = serializers.JSONField(source="additional_services", required=False)
     specialRequests = serializers.CharField(source="special_requests", required=False, allow_blank=True)
     transferSegment = serializers.CharField(source="transfer_segment", required=False, allow_blank=True)
     pickupTimeNote = serializers.CharField(source="pickup_time_note", required=False, allow_blank=True)
