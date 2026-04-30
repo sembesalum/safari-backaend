@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from .models import Booking, GalleryItem, Package, StaffProfile, Tour, TransferService
+from .models import Booking, GalleryItem, Package, PackageImage, StaffProfile, Tour, TourImage, TransferService
 
 User = get_user_model()
 
@@ -25,8 +25,12 @@ class PackageSerializer(serializers.ModelSerializer):
     priceGroups = serializers.JSONField(source="price_groups", required=False)
     heroImage = serializers.ImageField(source="hero_image", required=False, allow_null=True)
     heroImageUrl = serializers.URLField(source="hero_image_url", max_length=2000, required=False, allow_blank=True)
+    imageUrls = serializers.JSONField(source="image_urls", required=False)
+    additionalImageUrls = serializers.JSONField(write_only=True, required=False)
+    additionalImages = serializers.ListField(child=serializers.ImageField(), write_only=True, required=False)
     updatedAt = serializers.DateTimeField(source="updated_at", format="%Y-%m-%d", read_only=True)
     img = serializers.SerializerMethodField(read_only=True)
+    imgs = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Package
@@ -47,7 +51,11 @@ class PackageSerializer(serializers.ModelSerializer):
             "importantInfo",
             "heroImage",
             "heroImageUrl",
+            "imageUrls",
+            "additionalImageUrls",
+            "additionalImages",
             "img",
+            "imgs",
             "updatedAt",
             "created_at",
         ]
@@ -57,6 +65,53 @@ class PackageSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         return _absolute_media_url(request, obj.hero_image) or (obj.hero_image_url or "")
 
+    def get_imgs(self, obj):
+        primary = self.get_img(obj)
+        urls = [u for u in (obj.image_urls or []) if isinstance(u, str) and u.strip()]
+        request = self.context.get("request")
+        gallery = []
+        for item in obj.gallery_images.all():
+            resolved = _absolute_media_url(request, item.image) or (item.image_url or "")
+            if resolved:
+                gallery.append(resolved)
+        out = []
+        if primary:
+            out.append(primary)
+        for u in urls:
+            if u not in out:
+                out.append(u)
+        for u in gallery:
+            if u not in out:
+                out.append(u)
+        return out
+
+    def _replace_package_gallery(self, obj, urls, files):
+        obj.gallery_images.all().delete()
+        order = 0
+        for url in urls:
+            if isinstance(url, str) and url.strip():
+                PackageImage.objects.create(package=obj, image_url=url.strip(), sort_order=order)
+                order += 1
+        for file in files:
+            PackageImage.objects.create(package=obj, image=file, sort_order=order)
+            order += 1
+
+    def create(self, validated_data):
+        additional_urls = validated_data.pop("additionalImageUrls", None)
+        additional_files = validated_data.pop("additionalImages", None) or []
+        package = super().create(validated_data)
+        if additional_urls is not None or additional_files:
+            self._replace_package_gallery(package, additional_urls or [], additional_files)
+        return package
+
+    def update(self, instance, validated_data):
+        additional_urls = validated_data.pop("additionalImageUrls", None)
+        additional_files = validated_data.pop("additionalImages", None)
+        package = super().update(instance, validated_data)
+        if additional_urls is not None or additional_files is not None:
+            self._replace_package_gallery(package, additional_urls or [], additional_files or [])
+        return package
+
 
 class TourSerializer(serializers.ModelSerializer):
     id = serializers.UUIDField(read_only=True)
@@ -65,8 +120,12 @@ class TourSerializer(serializers.ModelSerializer):
     desc = serializers.CharField(source="description", required=False, allow_blank=True)
     heroImage = serializers.ImageField(source="hero_image", required=False, allow_null=True)
     heroImageUrl = serializers.URLField(source="hero_image_url", max_length=2000, required=False, allow_blank=True)
+    imageUrls = serializers.JSONField(source="image_urls", required=False)
+    additionalImageUrls = serializers.JSONField(write_only=True, required=False)
+    additionalImages = serializers.ListField(child=serializers.ImageField(), write_only=True, required=False)
     updatedAt = serializers.DateTimeField(source="updated_at", format="%Y-%m-%d", read_only=True)
     img = serializers.SerializerMethodField(read_only=True)
+    imgs = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Tour
@@ -84,7 +143,11 @@ class TourSerializer(serializers.ModelSerializer):
             "status",
             "heroImage",
             "heroImageUrl",
+            "imageUrls",
+            "additionalImageUrls",
+            "additionalImages",
             "img",
+            "imgs",
             "updatedAt",
             "created_at",
         ]
@@ -93,6 +156,53 @@ class TourSerializer(serializers.ModelSerializer):
     def get_img(self, obj):
         request = self.context.get("request")
         return _absolute_media_url(request, obj.hero_image) or (obj.hero_image_url or "")
+
+    def get_imgs(self, obj):
+        primary = self.get_img(obj)
+        urls = [u for u in (obj.image_urls or []) if isinstance(u, str) and u.strip()]
+        request = self.context.get("request")
+        gallery = []
+        for item in obj.gallery_images.all():
+            resolved = _absolute_media_url(request, item.image) or (item.image_url or "")
+            if resolved:
+                gallery.append(resolved)
+        out = []
+        if primary:
+            out.append(primary)
+        for u in urls:
+            if u not in out:
+                out.append(u)
+        for u in gallery:
+            if u not in out:
+                out.append(u)
+        return out
+
+    def _replace_tour_gallery(self, obj, urls, files):
+        obj.gallery_images.all().delete()
+        order = 0
+        for url in urls:
+            if isinstance(url, str) and url.strip():
+                TourImage.objects.create(tour=obj, image_url=url.strip(), sort_order=order)
+                order += 1
+        for file in files:
+            TourImage.objects.create(tour=obj, image=file, sort_order=order)
+            order += 1
+
+    def create(self, validated_data):
+        additional_urls = validated_data.pop("additionalImageUrls", None)
+        additional_files = validated_data.pop("additionalImages", None) or []
+        tour = super().create(validated_data)
+        if additional_urls is not None or additional_files:
+            self._replace_tour_gallery(tour, additional_urls or [], additional_files)
+        return tour
+
+    def update(self, instance, validated_data):
+        additional_urls = validated_data.pop("additionalImageUrls", None)
+        additional_files = validated_data.pop("additionalImages", None)
+        tour = super().update(instance, validated_data)
+        if additional_urls is not None or additional_files is not None:
+            self._replace_tour_gallery(tour, additional_urls or [], additional_files or [])
+        return tour
 
 
 class TransferServiceSerializer(serializers.ModelSerializer):

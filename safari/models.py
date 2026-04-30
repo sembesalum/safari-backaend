@@ -44,6 +44,7 @@ class Package(models.Model):
     important_info = models.JSONField(default=list, blank=True, help_text='["note", ...]')
     hero_image = models.ImageField(upload_to="packages/", blank=True, null=True)
     hero_image_url = models.URLField(max_length=2000, blank=True, help_text="If set, can be used instead of upload")
+    image_urls = models.JSONField(default=list, blank=True, help_text='Additional image URLs: ["https://...", ...]')
     updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -91,6 +92,7 @@ class Tour(models.Model):
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
     hero_image = models.ImageField(upload_to="tours/", blank=True, null=True)
     hero_image_url = models.URLField(max_length=2000, blank=True)
+    image_urls = models.JSONField(default=list, blank=True, help_text='Additional image URLs: ["https://...", ...]')
     updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -112,6 +114,36 @@ class Tour(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class PackageImage(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    package = models.ForeignKey(Package, on_delete=models.CASCADE, related_name="gallery_images")
+    image = models.ImageField(upload_to="packages/gallery/", blank=True, null=True)
+    image_url = models.URLField(max_length=2000, blank=True)
+    sort_order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["sort_order", "created_at"]
+
+    def __str__(self):
+        return f"{self.package.title} image {self.sort_order}"
+
+
+class TourImage(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tour = models.ForeignKey(Tour, on_delete=models.CASCADE, related_name="gallery_images")
+    image = models.ImageField(upload_to="tours/gallery/", blank=True, null=True)
+    image_url = models.URLField(max_length=2000, blank=True)
+    sort_order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["sort_order", "created_at"]
+
+    def __str__(self):
+        return f"{self.tour.title} image {self.sort_order}"
 
 
 class TransferService(models.Model):
