@@ -1,3 +1,5 @@
+import uuid
+
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
@@ -28,7 +30,7 @@ class PackageSerializer(serializers.ModelSerializer):
     imageUrls = serializers.JSONField(source="image_urls", required=False)
     additionalImageUrls = serializers.JSONField(write_only=True, required=False)
     additionalImages = serializers.ListField(child=serializers.ImageField(), write_only=True, required=False)
-    deleteGalleryImageIds = serializers.ListField(child=serializers.UUIDField(), write_only=True, required=False)
+    deleteGalleryImageIds = serializers.JSONField(write_only=True, required=False)
     deleteHeroImage = serializers.BooleanField(write_only=True, required=False, default=False)
     updatedAt = serializers.DateTimeField(source="updated_at", format="%Y-%m-%d", read_only=True)
     img = serializers.SerializerMethodField(read_only=True)
@@ -124,7 +126,14 @@ class PackageSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         additional_urls = validated_data.pop("additionalImageUrls", None)
         additional_files = validated_data.pop("additionalImages", None)
-        delete_ids = validated_data.pop("deleteGalleryImageIds", None) or []
+        raw_delete_ids = validated_data.pop("deleteGalleryImageIds", None) or []
+        delete_ids = []
+        if isinstance(raw_delete_ids, list):
+            for value in raw_delete_ids:
+                try:
+                    delete_ids.append(str(uuid.UUID(str(value))))
+                except Exception:
+                    continue
         delete_hero = bool(validated_data.pop("deleteHeroImage", False))
         package = super().update(instance, validated_data)
         if delete_hero:
@@ -148,7 +157,7 @@ class TourSerializer(serializers.ModelSerializer):
     imageUrls = serializers.JSONField(source="image_urls", required=False)
     additionalImageUrls = serializers.JSONField(write_only=True, required=False)
     additionalImages = serializers.ListField(child=serializers.ImageField(), write_only=True, required=False)
-    deleteGalleryImageIds = serializers.ListField(child=serializers.UUIDField(), write_only=True, required=False)
+    deleteGalleryImageIds = serializers.JSONField(write_only=True, required=False)
     deleteHeroImage = serializers.BooleanField(write_only=True, required=False, default=False)
     updatedAt = serializers.DateTimeField(source="updated_at", format="%Y-%m-%d", read_only=True)
     img = serializers.SerializerMethodField(read_only=True)
@@ -241,7 +250,14 @@ class TourSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         additional_urls = validated_data.pop("additionalImageUrls", None)
         additional_files = validated_data.pop("additionalImages", None)
-        delete_ids = validated_data.pop("deleteGalleryImageIds", None) or []
+        raw_delete_ids = validated_data.pop("deleteGalleryImageIds", None) or []
+        delete_ids = []
+        if isinstance(raw_delete_ids, list):
+            for value in raw_delete_ids:
+                try:
+                    delete_ids.append(str(uuid.UUID(str(value))))
+                except Exception:
+                    continue
         delete_hero = bool(validated_data.pop("deleteHeroImage", False))
         tour = super().update(instance, validated_data)
         if delete_hero:
