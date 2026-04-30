@@ -29,6 +29,7 @@ class PackageSerializer(serializers.ModelSerializer):
     additionalImageUrls = serializers.JSONField(write_only=True, required=False)
     additionalImages = serializers.ListField(child=serializers.ImageField(), write_only=True, required=False)
     deleteGalleryImageIds = serializers.ListField(child=serializers.UUIDField(), write_only=True, required=False)
+    deleteHeroImage = serializers.BooleanField(write_only=True, required=False, default=False)
     updatedAt = serializers.DateTimeField(source="updated_at", format="%Y-%m-%d", read_only=True)
     img = serializers.SerializerMethodField(read_only=True)
     imgs = serializers.SerializerMethodField(read_only=True)
@@ -57,6 +58,7 @@ class PackageSerializer(serializers.ModelSerializer):
             "additionalImageUrls",
             "additionalImages",
             "deleteGalleryImageIds",
+            "deleteHeroImage",
             "img",
             "imgs",
             "galleryImages",
@@ -113,6 +115,7 @@ class PackageSerializer(serializers.ModelSerializer):
         additional_urls = validated_data.pop("additionalImageUrls", None)
         additional_files = validated_data.pop("additionalImages", None) or []
         validated_data.pop("deleteGalleryImageIds", None)
+        validated_data.pop("deleteHeroImage", None)
         package = super().create(validated_data)
         if additional_urls is not None or additional_files:
             self._append_package_gallery(package, additional_urls or [], additional_files)
@@ -122,7 +125,12 @@ class PackageSerializer(serializers.ModelSerializer):
         additional_urls = validated_data.pop("additionalImageUrls", None)
         additional_files = validated_data.pop("additionalImages", None)
         delete_ids = validated_data.pop("deleteGalleryImageIds", None) or []
+        delete_hero = bool(validated_data.pop("deleteHeroImage", False))
         package = super().update(instance, validated_data)
+        if delete_hero:
+            package.hero_image = None
+            package.hero_image_url = ""
+            package.save(update_fields=["hero_image", "hero_image_url"])
         if delete_ids:
             package.gallery_images.filter(id__in=delete_ids).delete()
         if additional_urls is not None or additional_files is not None:
@@ -141,6 +149,7 @@ class TourSerializer(serializers.ModelSerializer):
     additionalImageUrls = serializers.JSONField(write_only=True, required=False)
     additionalImages = serializers.ListField(child=serializers.ImageField(), write_only=True, required=False)
     deleteGalleryImageIds = serializers.ListField(child=serializers.UUIDField(), write_only=True, required=False)
+    deleteHeroImage = serializers.BooleanField(write_only=True, required=False, default=False)
     updatedAt = serializers.DateTimeField(source="updated_at", format="%Y-%m-%d", read_only=True)
     img = serializers.SerializerMethodField(read_only=True)
     imgs = serializers.SerializerMethodField(read_only=True)
@@ -166,6 +175,7 @@ class TourSerializer(serializers.ModelSerializer):
             "additionalImageUrls",
             "additionalImages",
             "deleteGalleryImageIds",
+            "deleteHeroImage",
             "img",
             "imgs",
             "galleryImages",
@@ -222,6 +232,7 @@ class TourSerializer(serializers.ModelSerializer):
         additional_urls = validated_data.pop("additionalImageUrls", None)
         additional_files = validated_data.pop("additionalImages", None) or []
         validated_data.pop("deleteGalleryImageIds", None)
+        validated_data.pop("deleteHeroImage", None)
         tour = super().create(validated_data)
         if additional_urls is not None or additional_files:
             self._append_tour_gallery(tour, additional_urls or [], additional_files)
@@ -231,7 +242,12 @@ class TourSerializer(serializers.ModelSerializer):
         additional_urls = validated_data.pop("additionalImageUrls", None)
         additional_files = validated_data.pop("additionalImages", None)
         delete_ids = validated_data.pop("deleteGalleryImageIds", None) or []
+        delete_hero = bool(validated_data.pop("deleteHeroImage", False))
         tour = super().update(instance, validated_data)
+        if delete_hero:
+            tour.hero_image = None
+            tour.hero_image_url = ""
+            tour.save(update_fields=["hero_image", "hero_image_url"])
         if delete_ids:
             tour.gallery_images.filter(id__in=delete_ids).delete()
         if additional_urls is not None or additional_files is not None:
