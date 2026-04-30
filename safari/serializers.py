@@ -28,9 +28,11 @@ class PackageSerializer(serializers.ModelSerializer):
     imageUrls = serializers.JSONField(source="image_urls", required=False)
     additionalImageUrls = serializers.JSONField(write_only=True, required=False)
     additionalImages = serializers.ListField(child=serializers.ImageField(), write_only=True, required=False)
+    deleteGalleryImageIds = serializers.ListField(child=serializers.UUIDField(), write_only=True, required=False)
     updatedAt = serializers.DateTimeField(source="updated_at", format="%Y-%m-%d", read_only=True)
     img = serializers.SerializerMethodField(read_only=True)
     imgs = serializers.SerializerMethodField(read_only=True)
+    galleryImages = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Package
@@ -54,8 +56,10 @@ class PackageSerializer(serializers.ModelSerializer):
             "imageUrls",
             "additionalImageUrls",
             "additionalImages",
+            "deleteGalleryImageIds",
             "img",
             "imgs",
+            "galleryImages",
             "updatedAt",
             "created_at",
         ]
@@ -85,9 +89,18 @@ class PackageSerializer(serializers.ModelSerializer):
                 out.append(u)
         return out
 
-    def _replace_package_gallery(self, obj, urls, files):
-        obj.gallery_images.all().delete()
-        order = 0
+    def get_galleryImages(self, obj):
+        request = self.context.get("request")
+        out = []
+        for item in obj.gallery_images.all():
+            src = _absolute_media_url(request, item.image) or (item.image_url or "")
+            if not src:
+                continue
+            out.append({"id": str(item.id), "src": src})
+        return out
+
+    def _append_package_gallery(self, obj, urls, files):
+        order = obj.gallery_images.count()
         for url in urls:
             if isinstance(url, str) and url.strip():
                 PackageImage.objects.create(package=obj, image_url=url.strip(), sort_order=order)
@@ -99,17 +112,21 @@ class PackageSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         additional_urls = validated_data.pop("additionalImageUrls", None)
         additional_files = validated_data.pop("additionalImages", None) or []
+        validated_data.pop("deleteGalleryImageIds", None)
         package = super().create(validated_data)
         if additional_urls is not None or additional_files:
-            self._replace_package_gallery(package, additional_urls or [], additional_files)
+            self._append_package_gallery(package, additional_urls or [], additional_files)
         return package
 
     def update(self, instance, validated_data):
         additional_urls = validated_data.pop("additionalImageUrls", None)
         additional_files = validated_data.pop("additionalImages", None)
+        delete_ids = validated_data.pop("deleteGalleryImageIds", None) or []
         package = super().update(instance, validated_data)
+        if delete_ids:
+            package.gallery_images.filter(id__in=delete_ids).delete()
         if additional_urls is not None or additional_files is not None:
-            self._replace_package_gallery(package, additional_urls or [], additional_files or [])
+            self._append_package_gallery(package, additional_urls or [], additional_files or [])
         return package
 
 
@@ -123,9 +140,11 @@ class TourSerializer(serializers.ModelSerializer):
     imageUrls = serializers.JSONField(source="image_urls", required=False)
     additionalImageUrls = serializers.JSONField(write_only=True, required=False)
     additionalImages = serializers.ListField(child=serializers.ImageField(), write_only=True, required=False)
+    deleteGalleryImageIds = serializers.ListField(child=serializers.UUIDField(), write_only=True, required=False)
     updatedAt = serializers.DateTimeField(source="updated_at", format="%Y-%m-%d", read_only=True)
     img = serializers.SerializerMethodField(read_only=True)
     imgs = serializers.SerializerMethodField(read_only=True)
+    galleryImages = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Tour
@@ -146,8 +165,10 @@ class TourSerializer(serializers.ModelSerializer):
             "imageUrls",
             "additionalImageUrls",
             "additionalImages",
+            "deleteGalleryImageIds",
             "img",
             "imgs",
+            "galleryImages",
             "updatedAt",
             "created_at",
         ]
@@ -177,9 +198,18 @@ class TourSerializer(serializers.ModelSerializer):
                 out.append(u)
         return out
 
-    def _replace_tour_gallery(self, obj, urls, files):
-        obj.gallery_images.all().delete()
-        order = 0
+    def get_galleryImages(self, obj):
+        request = self.context.get("request")
+        out = []
+        for item in obj.gallery_images.all():
+            src = _absolute_media_url(request, item.image) or (item.image_url or "")
+            if not src:
+                continue
+            out.append({"id": str(item.id), "src": src})
+        return out
+
+    def _append_tour_gallery(self, obj, urls, files):
+        order = obj.gallery_images.count()
         for url in urls:
             if isinstance(url, str) and url.strip():
                 TourImage.objects.create(tour=obj, image_url=url.strip(), sort_order=order)
@@ -191,17 +221,21 @@ class TourSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         additional_urls = validated_data.pop("additionalImageUrls", None)
         additional_files = validated_data.pop("additionalImages", None) or []
+        validated_data.pop("deleteGalleryImageIds", None)
         tour = super().create(validated_data)
         if additional_urls is not None or additional_files:
-            self._replace_tour_gallery(tour, additional_urls or [], additional_files)
+            self._append_tour_gallery(tour, additional_urls or [], additional_files)
         return tour
 
     def update(self, instance, validated_data):
         additional_urls = validated_data.pop("additionalImageUrls", None)
         additional_files = validated_data.pop("additionalImages", None)
+        delete_ids = validated_data.pop("deleteGalleryImageIds", None) or []
         tour = super().update(instance, validated_data)
+        if delete_ids:
+            tour.gallery_images.filter(id__in=delete_ids).delete()
         if additional_urls is not None or additional_files is not None:
-            self._replace_tour_gallery(tour, additional_urls or [], additional_files or [])
+            self._append_tour_gallery(tour, additional_urls or [], additional_files or [])
         return tour
 
 
